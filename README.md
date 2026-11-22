@@ -1,5 +1,7 @@
 # Robot in a Strange House
 
+[![Tests and deploy](https://github.com/groxburgh/robot-in-a-strange-house/actions/workflows/ci.yml/badge.svg)](https://github.com/groxburgh/robot-in-a-strange-house/actions/workflows/ci.yml)
+
 A robot is dropped at the front door of a house it has never seen. You tell it what to do in plain English, and it has to work out the layout, find things and put them where you asked, using only what it has seen so far. Meanwhile the people who live there keep moving things, closing doors and leaving stuff on the floor, and the cat gets in the way.
 
 **[Try it in your browser](https://groxburgh.github.io/robot-in-a-strange-house/)**. No install, no account, no API key. Every house is generated from a seed, so `#house-42` is always the same house.
