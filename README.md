@@ -2,7 +2,7 @@
 
 A robot is dropped at the front door of a house it has never seen. You tell it what to do in plain English, and it has to work out the layout, find things and put them where you asked, using only what it has seen so far.
 
-**[Try it in your browser](https://groxburgh.github.io/strange-house/)**. No install, no account, no API key. Every house is generated fresh from a seed, so `#house-42` is always the same house.
+**[Try it in your browser](https://groxburgh.github.io/robot-in-a-strange-house/)**. No install, no account, no API key. Every house is generated fresh from a seed, so `#house-42` is always the same house.
 
 ![The robot tidying an unfamiliar house](docs/demo.gif)
 
@@ -79,8 +79,8 @@ This is a grid-world model, so read the results with that in mind:
 Requires Node 18 or later. No `npm install` needed.
 
 ```bash
-git clone https://github.com/groxburgh/strange-house.git
-cd strange-house
+git clone https://github.com/groxburgh/robot-in-a-strange-house.git
+cd robot-in-a-strange-house
 npm test          # 25 tests: generator, parser, robot behaviour
 npm run bench     # benchmark table above
 npm run serve     # then open http://localhost:8000

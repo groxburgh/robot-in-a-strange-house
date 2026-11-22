@@ -1,5 +1,5 @@
 {
-  "name": "strange-house",
+  "name": "robot-in-a-strange-house",
   "version": "1.0.0",
   "description": "A robot explores a house it has never seen and follows plain-English instructions. Runs in the browser, no dependencies.",
   "type": "module",
