@@ -2,7 +2,7 @@
 // furniture, and a hatched wash over everything the robot hasn't seen yet.
 
 import { WALL } from './house.js';
-import { UNKNOWN } from './robot.js';
+import { UNKNOWN, K_CLOSED, K_CLUTTER } from './robot.js';
 
 const ROOM_VAR = {
   'living room': '--r-living', kitchen: '--r-kitchen', bedroom: '--r-bedroom',
@@ -36,7 +36,7 @@ export function readColors(el) {
   const rooms = Object.fromEntries(Object.entries(ROOM_VAR).map(([k, n]) => [k, v(n)]));
   return {
     paper: v('--paper'), wall: v('--wall'), line: v('--line'), fog: v('--fog'), fogLine: v('--fog-line'),
-    ink: v('--ink'), soft: v('--soft'), accent: v('--accent'), accentInk: v('--accent-ink'), rooms,
+    ink: v('--ink'), soft: v('--soft'), accent: v('--accent'), accentInk: v('--accent-ink'), err: v('--err'), rooms,
   };
 }
 
@@ -116,6 +116,20 @@ export function draw(ctx, cs, house, robot, opts = {}) {
     } else if (!reveal) { ctx.fillStyle = pat; ctx.fillRect(x * cs, y * cs, cs + 0.5, cs + 0.5); }
   }
 
+  // Memory fading: places the robot hasn't looked at for a while get hatched
+  // back in gradually (only matters when someone else lives here).
+  if (opts.fade) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = house.idx(x, y);
+      if (!seen(i) || robot.visible.has(i) || house.cells[i] === WALL) continue;
+      const age = robot.ticks - robot.lastSeen[i];
+      if (age <= 20) continue;
+      ctx.globalAlpha = Math.min(0.6, (age - 20) / 500);
+      ctx.fillStyle = pat; ctx.fillRect(x * cs, y * cs, cs + 0.5, cs + 0.5);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   // Walls (solid poché)
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = house.idx(x, y);
@@ -132,12 +146,39 @@ export function draw(ctx, cs, house, robot, opts = {}) {
   ctx.fillStyle = col.accent;
   ctx.fillRect(fd.x * cs + cs * 0.15, fd.y * cs + cs * 0.15, cs * 0.7, cs * 0.7);
 
-  // Doors
+  // Doors: swing arc when open, a solid leaf when closed, red dot when locked.
+  // Shows the truth for doors in view (or with reveal on), memory otherwise.
+  const now = (i) => reveal || robot.visible.has(i);
   for (const d of house.doors) {
     const i = house.idx(d.x, d.y);
     if (!seen(i) && !reveal) continue;
-    doorSwing(ctx, d.x, d.y, cs, col);
+    const closed = now(i) ? house.dyn.closed.has(i) : robot.known[i] === K_CLOSED;
+    if (!closed) { doorSwing(ctx, d.x, d.y, cs, col); continue; }
+    const vertical = house.cells[house.idx(d.x - 1, d.y)] !== WALL; // passage runs left-right
+    ctx.fillStyle = col.ink;
+    if (vertical) ctx.fillRect(d.x * cs + cs * 0.38, d.y * cs, cs * 0.24, cs + 0.5);
+    else ctx.fillRect(d.x * cs, d.y * cs + cs * 0.38, cs + 0.5, cs * 0.24);
+    const lockedKnown = (robot.lockedUntil.get(i) ?? -1) > robot.ticks;
+    if (now(i) ? house.dyn.locked.has(i) : lockedKnown) {
+      ctx.fillStyle = col.err;
+      ctx.beginPath(); ctx.arc((d.x + 0.5) * cs, (d.y + 0.5) * cs, cs * 0.2, 0, Math.PI * 2); ctx.fill();
+    }
   }
+
+  // Clutter on the floor
+  for (let i = 0; i < W * H; i++) {
+    const truth = house.dyn.clutter.has(i);
+    const show = now(i) ? truth : robot.known[i] === K_CLUTTER;
+    if (!show) continue;
+    const x = i % W, y = (i / W) | 0;
+    ctx.globalAlpha = now(i) ? 1 : 0.5;
+    ctx.strokeStyle = col.ink; ctx.fillStyle = col.fog; ctx.lineWidth = Math.max(1, cs / 16);
+    const p = cs * 0.22;
+    ctx.beginPath(); ctx.rect(x * cs + p, y * cs + p, cs - 2 * p, cs - 2 * p); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x * cs + p, y * cs + p); ctx.lineTo(x * cs + cs - p, y * cs + cs - p);
+    ctx.moveTo(x * cs + cs - p, y * cs + p); ctx.lineTo(x * cs + p, y * cs + cs - p); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 
   // Furniture
   for (const f of house.furniture) {
@@ -176,28 +217,52 @@ export function draw(ctx, cs, house, robot, opts = {}) {
     ctx.stroke(); ctx.setLineDash([]);
   }
 
-  // Objects
+  // Objects. Without reveal we draw what the robot believes (fading with age);
+  // with reveal we draw the truth, plus hollow markers where the robot's
+  // memory is now wrong.
   const objFont = Math.max(11, Math.round(cs * 0.5));
   ctx.font = `600 ${objFont}px ${opts.font ?? 'sans-serif'}`;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   const stack = new Map();
-  for (const o of house.objects) {
-    if (o.carried) continue;
-    const i = house.idx(o.x, o.y);
-    if (!seen(i) && !reveal) continue;
+  const mark = (name, x, y, on, alpha, hollow) => {
+    const i = house.idx(x, y);
     const k = stack.get(i) ?? 0; stack.set(i, k + 1);
-    // On furniture: tuck the marker into the cell's top-right corner, off the symbol.
-    const px = (o.x + (o.on ? 0.92 : 0.5)) * cs;
-    const py = (o.y + (o.on ? 0.12 : 0.5)) * cs - k * objFont * 1.05;
-    ctx.globalAlpha = seen(i) ? 1 : 0.55;
-    ctx.fillStyle = col.ink;
-    ctx.beginPath(); ctx.arc(px, py, cs * 0.17, 0, Math.PI * 2); ctx.fill();
+    const px = (x + (on ? 0.92 : 0.5)) * cs;
+    const py = (y + (on ? 0.12 : 0.5)) * cs - k * objFont * 1.05;
+    ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(px, py, cs * 0.17, 0, Math.PI * 2);
+    if (hollow) { ctx.strokeStyle = col.err; ctx.lineWidth = 1.5; ctx.stroke(); } else { ctx.fillStyle = col.ink; ctx.fill(); }
     if (cs >= 14) {
-      ctx.lineWidth = 3; ctx.strokeStyle = col.paper;
-      ctx.strokeText(o.name, px + cs * 0.3, py); ctx.fillText(o.name, px + cs * 0.3, py);
+      ctx.lineWidth = 3; ctx.strokeStyle = col.paper; ctx.fillStyle = hollow ? col.err : col.ink;
+      const label = hollow ? `${name}?` : name;
+      ctx.strokeText(label, px + cs * 0.3, py); ctx.fillText(label, px + cs * 0.3, py);
+    }
+  };
+  if (reveal) {
+    for (const o of house.objects) if (!o.carried) mark(o.name, o.x, o.y, o.on, 1, false);
+    for (const [name, b] of robot.objects) {
+      const o = house.objects.find((q) => q.name === name);
+      if (o.carried || o.x !== b.x || o.y !== b.y) mark(name, b.x, b.y, b.on, 0.9, true);
+    }
+  } else {
+    for (const [name, b] of robot.objects) {
+      const age = robot.ticks - (b.t ?? 0);
+      mark(name, b.x, b.y, b.on, opts.fade ? Math.max(0.35, 1 - age / 600) : 1, false);
     }
   }
   ctx.globalAlpha = 1;
+
+  // The cat
+  const cat = house.dyn.cat;
+  if (cat && (reveal || robot.visible.has(house.idx(cat.x, cat.y)))) {
+    const cx = (cat.x + 0.5) * cs, cy = (cat.y + 0.55) * cs, r = cs * 0.26;
+    ctx.fillStyle = col.ink;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.95, cy - r * 0.2); ctx.lineTo(cx - r * 0.75, cy - r * 1.45); ctx.lineTo(cx - r * 0.15, cy - r * 0.85);
+    ctx.moveTo(cx + r * 0.95, cy - r * 0.2); ctx.lineTo(cx + r * 0.75, cy - r * 1.45); ctx.lineTo(cx + r * 0.15, cy - r * 0.85);
+    ctx.fill();
+  }
 
   // Vision range and robot
   const rx = (robot.x + 0.5) * cs, ry = (robot.y + 0.5) * cs;

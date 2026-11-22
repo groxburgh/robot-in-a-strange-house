@@ -1,0 +1,96 @@
+{
+  "seeds": 200,
+  "idle": 300,
+  "results": [
+    {
+      "label": "Nobody home",
+      "activity": 0,
+      "memory": "static",
+      "success": 0.91,
+      "falseMissing": 0.09,
+      "meanSteps": 62.62637362637363,
+      "staleShare": 0.09,
+      "successWhenStale": 0,
+      "episodes": 200
+    },
+    {
+      "label": "Nobody home",
+      "activity": 0,
+      "memory": "fresh",
+      "success": 1,
+      "falseMissing": 0,
+      "meanSteps": 72.06,
+      "staleShare": 0.09,
+      "successWhenStale": 1,
+      "episodes": 200
+    },
+    {
+      "label": "Lived-in",
+      "activity": 1,
+      "memory": "static",
+      "success": 0.57,
+      "falseMissing": 0.43,
+      "meanSteps": 72.20175438596492,
+      "staleShare": 0.65,
+      "successWhenStale": 0.36153846153846153,
+      "episodes": 200
+    },
+    {
+      "label": "Lived-in",
+      "activity": 1,
+      "memory": "fresh",
+      "success": 0.99,
+      "falseMissing": 0.01,
+      "meanSteps": 95.64646464646465,
+      "staleShare": 0.65,
+      "successWhenStale": 0.9846153846153847,
+      "episodes": 200
+    },
+    {
+      "label": "Chaotic",
+      "activity": 3,
+      "memory": "static",
+      "success": 0.42,
+      "falseMissing": 0.58,
+      "meanSteps": 75.01190476190476,
+      "staleShare": 0.865,
+      "successWhenStale": 0.32947976878612717,
+      "episodes": 200
+    },
+    {
+      "label": "Chaotic",
+      "activity": 3,
+      "memory": "fresh",
+      "success": 0.935,
+      "falseMissing": 0.065,
+      "meanSteps": 120.23529411764706,
+      "staleShare": 0.865,
+      "successWhenStale": 0.9248554913294798,
+      "episodes": 200
+    },
+    {
+      "label": "Nobody home, poor eyesight",
+      "activity": 0,
+      "eyesight": "poor",
+      "memory": "static",
+      "success": 0.775,
+      "falseMissing": 0.225,
+      "meanSteps": 61.69032258064516,
+      "staleShare": 0.225,
+      "successWhenStale": 0,
+      "episodes": 200
+    },
+    {
+      "label": "Nobody home, poor eyesight",
+      "activity": 0,
+      "eyesight": "poor",
+      "memory": "fresh",
+      "success": 1,
+      "falseMissing": 0,
+      "meanSteps": 89.05,
+      "staleShare": 0.225,
+      "successWhenStale": 1,
+      "episodes": 200
+    }
+  ]
+}

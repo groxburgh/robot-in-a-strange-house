@@ -198,6 +198,21 @@ export function generateHouse(seed, opts = {}) {
     furniture, furnitureByName, furnAt, objects, priorStrength,
     idx,
     walkable,
+    // Things the household can change after generation (see household.js).
+    dyn: { closed: new Set(), locked: new Map(), clutter: new Map(), cat: null },
+    // Can something step onto this cell right now? (closed doors need opening first)
+    passableNow(x, y) {
+      if (!walkable(x, y)) return false;
+      const i = idx(x, y);
+      const d = this.dyn;
+      if (d.closed.has(i) || d.clutter.has(i)) return false;
+      if (d.cat && d.cat.x === x && d.cat.y === y) return false;
+      return true;
+    },
+    blocksSight(x, y) {
+      const i = idx(x, y);
+      return cells[i] === WALL || this.dyn.closed.has(i);
+    },
     roomTypeAt(x, y) {
       const id = roomId[idx(x, y)];
       return id >= 0 ? rooms[id].type : null;

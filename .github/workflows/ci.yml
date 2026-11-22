@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,7 +23,7 @@ jobs:
 
   deploy:
     # Publishes the demo to GitHub Pages (Settings > Pages > Source: GitHub Actions).
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: test
     runs-on: ubuntu-latest
     environment:
@@ -36,7 +37,7 @@ jobs:
           mkdir -p _site/bench _site/docs
           cp index.html _site/
           cp -r src _site/
-          cp bench/results.json _site/bench/
+          cp bench/results.json bench/dynamic.json _site/bench/
           cp docs/demo.gif _site/docs/
       - uses: actions/upload-pages-artifact@v3
         with:

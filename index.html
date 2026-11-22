@@ -61,6 +61,9 @@ button:hover,select:hover{background:var(--fog)}button.go:hover{filter:brightnes
 .log .room,.log .object{color:var(--soft)}
 .log .t{display:inline-block;width:3.2em;color:var(--soft);font-variant-numeric:tabular-nums;font-family:"Archivo Narrow",sans-serif}
 .controls{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:8px 0 0}
+.lbl{font-size:14px;color:var(--soft);margin-right:2px}
+.log .surprise{color:var(--accent)}
+.log .world{color:var(--soft);font-style:italic}
 .tb .house{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-right:6px}
 .tb .house button{min-height:40px;padding:0 10px;font-size:14px}
 .seg{display:flex}.seg button{border-right-width:0;padding:0 10px}.seg button:last-child{border-right-width:1.5px}
@@ -91,7 +94,7 @@ footer a,.note a{color:var(--ink)}
 <header class="band" style="padding-bottom:16px">
   <div class="wrap">
     <h1>First day in a strange house</h1>
-    <p class="lede">A robot is dropped at the front door of a house it has never seen. <b>Tell it what to do in plain English.</b> It has to work out the layout, find things and put them where you asked, using only what it has seen so far. Every house is new.</p>
+    <p class="lede">A robot is dropped at the front door of a house it has never seen. <b>Tell it what to do in plain English.</b> It has to work out the layout, find things and put them where you asked, using only what it has seen so far. Meanwhile the people who live here keep moving things, closing doors and leaving stuff on the floor, and the cat gets in the way.</p>
   </div>
 </header>
 
@@ -99,7 +102,7 @@ footer a,.note a{color:var(--ink)}
   <div class="wrap sheet">
     <div class="left">
       <div class="fig"><canvas id="plan" aria-label="Floor plan of the house as the robot currently knows it"></canvas></div>
-      <p class="hint" id="hover-info">Hatched areas are parts of the house the robot hasn't seen yet. Hover or tap the plan to inspect a spot.</p>
+      <p class="hint" id="hover-info">Hatched areas are parts of the house the robot hasn't seen yet, or hasn't looked at for a while. Hover or tap the plan to inspect a spot.</p>
       <div class="controls">
           <div class="seg" role="group" aria-label="Speed" id="speed">
             <button type="button" data-speed="6">Slow</button>
@@ -114,6 +117,22 @@ footer a,.note a{color:var(--ink)}
             <option value="naive">Nearest gap first</option>
           </select>
           <button type="button" id="reset">Restart</button>
+      </div>
+      <div class="controls">
+          <span class="lbl" id="hh-label">Household</span>
+          <div class="seg" role="group" aria-labelledby="hh-label" id="activity">
+            <button type="button" data-activity="0">Nobody home</button>
+            <button type="button" data-activity="1" aria-pressed="true">Lived-in</button>
+            <button type="button" data-activity="3">Chaotic</button>
+          </div>
+          <select id="memory" aria-label="Memory">
+            <option value="fresh">Re-checks old memories</option>
+            <option value="static">Trusts its memory</option>
+          </select>
+          <select id="eyesight" aria-label="Eyesight">
+            <option value="good">Good eyesight</option>
+            <option value="poor">Poor eyesight</option>
+          </select>
       </div>
     </div>
 
@@ -153,10 +172,22 @@ footer a,.note a{color:var(--ink)}
         <li><b>It plans on its own map.</b>Routes are worked out only over floor it has actually seen, then re-planned every step as the map grows.</li>
         <li><b>It explores the edges.</b>When it needs something it hasn't found, it walks to the boundary between known and unknown space.</li>
         <li><b>It can use hints.</b>With room hints on, it checks bathrooms first for a towel and kitchens first for milk. Switch it off to compare.</li>
+        <li><b>Its memory fades.</b>Every sighting is timestamped. When something isn't where it remembers and there's nothing new to explore, it re-checks the places it hasn't looked at since you asked. Switch to "Trusts its memory" to see what happens without this.</li>
+        <li><b>Small things need a close look.</b>Keys, socks, the remote and the toothbrush are only noticed from three cells away, or two with poor eyesight.</li>
+        <li><b>It copes with doors and the cat.</b>It opens closed doors, re-routes around clutter, and waits when the cat or a locked door blocks the only way through.</li>
         <li><b>It reads plain English.</b>Commands can be chained with "then". It tells you when it doesn't understand a word, or when something isn't in the house.</li>
       </ol>
     </div>
     <div>
+      <h2>A robot that trusts its memory gets things wrong</h2>
+      <p style="margin:0 0 12px">The robot explores a new house, waits 300 steps while the household carries on, then is asked to fetch one thing. Nothing ever leaves the house, so "it isn't here" is always the wrong answer. Re-checking costs extra walking, which shows up in the step counts.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>House</th><th>Memory</th><th>Success</th><th>Wrongly said "not here"</th><th>Mean steps</th></tr></thead>
+          <tbody id="bench2"></tbody>
+        </table>
+      </div>
+      <p class="note" style="margin-bottom:36px">200 houses per row. Run <code>npm run bench:dynamic</code> to reproduce.</p>
       <h2>Room hints help when the house is predictable</h2>
       <p style="margin:0 0 12px">300 new houses per row, one errand each. SPL compares the robot's route with the shortest route from someone who already had the floor plan: 1.0 would be a perfect score.</p>
       <div class="scroll">
@@ -165,10 +196,11 @@ footer a,.note a{color:var(--ink)}
           <tbody id="bench"></tbody>
         </table>
       </div>
-      <p class="note">When objects are scattered at random, the hints are slightly worse than useless. When the house is tidy-ish, they cut steps by about a tenth. Run <code>node bench/run.js</code> to reproduce.</p>
+      <p class="note">When objects are scattered at random, the hints are slightly worse than useless. When the house is tidy-ish, they cut steps by about a tenth. Run <code>npm run bench</code> to reproduce.</p>
     </div>
   </div>
 </section>
+
 
 <footer class="band" style="padding-top:0">
   <div class="wrap">A small robotics side project by Greg Roxburgh. The premise comes from Figure AI's Brett Adcock on <i>Moonshots with Peter Diamandis</i> (November 2026): a home robot isn't ready until it can walk into an unfamiliar house and follow spoken instructions without help. Source on <a href="https://github.com/groxburgh/robot-in-a-strange-house">GitHub</a>.</div>

@@ -67,3 +67,10 @@ export const ALL_OBJECTS = Object.keys(OBJECTS);
 // "in the sink" vs "on the sofa"
 const INSIDE = new Set(['sink', 'fridge', 'wardrobe', 'bathtub', 'basin', 'washing machine', 'laundry basket']);
 export const onOrIn = (furniture) => (INSIDE.has(furniture) ? 'in' : 'on');
+
+// Small things are only noticed up close. Distances in cells, by eyesight.
+export const SMALL = new Set(['keys', 'sock', 'toothbrush', 'remote']);
+export const SIGHT = {
+  good: { normal: 6, small: 3 },
+  poor: { normal: 4, small: 2 },
+};

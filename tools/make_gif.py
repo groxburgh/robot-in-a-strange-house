@@ -17,9 +17,10 @@ band = picks[0].height // 2
 strip = Image.new("RGB", (width, picks[0].height * len(picks) + band))
 for k, p in enumerate(picks):
     strip.paste(p, (0, k * p.height))
-# Reserve palette room for the robot's cobalt (thin lines and dots get averaged away otherwise).
-strip.paste((43, 76, 255), (0, picks[0].height * len(picks), width // 2, strip.height))
-strip.paste((140, 156, 250), (width // 2, picks[0].height * len(picks), width, strip.height))
+# Reserve palette room for the robot's cobalt and the red 'memory is wrong' markers (thin lines and dots get averaged away otherwise).
+y0 = picks[0].height * len(picks)
+for k, rgb in enumerate([(43, 76, 255), (140, 156, 250), (179, 38, 30)]):
+    strip.paste(rgb, (k * width // 3, y0, (k + 1) * width // 3, strip.height))
 palette = strip.quantize(colors=96, method=Image.Quantize.MEDIANCUT)
 frames = [im.quantize(palette=palette, dither=Image.Dither.NONE) for im in imgs]
 durations = [100] * len(frames)
