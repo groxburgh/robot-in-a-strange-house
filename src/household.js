@@ -12,7 +12,7 @@
 
 import { makeRng } from './rng.js';
 import { WALL, DOOR, N4, N8 } from './house.js';
-import { OBJECTS } from './catalog.js';
+import { placeMisplaced } from './catalog.js';
 
 const CLUTTER = ['bag', 'box', 'laundry pile', 'shoes'];
 
@@ -74,28 +74,27 @@ export class Household {
     const movable = h.objects.filter((o) => !o.carried && !seen(o.x, o.y));
     if (!movable.length) return;
     const o = rng.pick(movable);
-    const spec = OBJECTS[o.name];
-    const present = new Set(h.rooms.map((r) => r.type));
-    const likely = spec.likely.filter((t) => present.has(t));
-    const type = likely.length && rng.chance(h.priorStrength) ? rng.pick(likely) : rng.pick(h.rooms).type;
-    const room = rng.pick(h.rooms.filter((r) => r.type === type));
-    const surfaces = h.furniture.filter((f) => f.room === room.id && !seen(f.x, f.y));
+    const floorOk = (x, y) => h.passableNow(x, y) && !seen(x, y) && !h.objectAt(x, y)
+      && !(x === h.start.x && y === h.start.y) && !(robot && x === robot.x && y === robot.y);
+    const furnOk = (room, name) => h.furniture.some((f) => f.room === room.id && f.name === name && !seen(f.x, f.y));
+    const surfacesIn = (room) => h.furniture.filter((f) => f.room === room.id).map((f) => f.name);
+    const ok = (room, spot) => (spot === 'floor' ? room.cells.some(([x, y]) => floorOk(x, y)) : furnOk(room, spot));
+    const pick = placeMisplaced(rng, o.name, h.rooms, h.placement, ok, surfacesIn);
+    if (!pick) return;
     let spot;
-    if (surfaces.length && rng.chance(0.45)) {
-      const f = rng.pick(surfaces);
-      spot = { x: f.x, y: f.y, on: f.name };
-    } else {
-      const floor = room.cells.filter(([x, y]) => h.passableNow(x, y) && !seen(x, y)
-        && !h.objectAt(x, y) && !(x === h.start.x && y === h.start.y)
-        && !(robot && x === robot.x && y === robot.y));
+    if (pick.spot === 'floor') {
+      const floor = pick.room.cells.filter(([x, y]) => floorOk(x, y));
       if (!floor.length) return;
       const [x, y] = rng.pick(floor);
       spot = { x, y, on: null };
+    } else {
+      const f = h.furniture.find((q) => q.room === pick.room.id && q.name === pick.spot);
+      spot = { x: f.x, y: f.y, on: f.name };
     }
     if (spot.x === o.x && spot.y === o.y) return;
     const from = o.on ? `the ${o.on}` : `the ${h.roomTypeAt(o.x, o.y)} floor`;
     Object.assign(o, spot);
-    const to = spot.on ? `the ${spot.on}` : `the ${room.type} floor`;
+    const to = spot.on ? `the ${spot.on}` : `the ${pick.room.type} floor`;
     this.note(`Someone moved the ${o.name} from ${from} to ${to}.`);
   }
 

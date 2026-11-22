@@ -5,7 +5,7 @@
 // reachable without making the plan look like a maze.
 
 import { makeRng } from './rng.js';
-import { REQUIRED_ROOMS, EXTRA_ROOMS, FURNITURE, OBJECTS } from './catalog.js';
+import { EXTRA_ROOMS, REQUIRED_ROOMS, FURNITURE, OBJECTS, placeMisplaced } from './catalog.js';
 
 export const WALL = 0;
 export const FLOOR = 1;
@@ -18,9 +18,9 @@ const N8 = [...N4, [1, 1], [1, -1], [-1, 1], [-1, -1]];
 export function generateHouse(seed, opts = {}) {
   const W = opts.width ?? 36;
   const H = opts.height ?? 24;
-  // Probability that a misplaced object sits in one of its "usual" rooms.
-  // 0 = objects are scattered at random; 1 = always somewhere typical.
-  const priorStrength = opts.priorStrength ?? 0.65;
+  // How misplaced objects are scattered: 'housekeep' (human data), 'procthor'
+  // (rooms they belong in) or 'random'. See placeMisplaced in catalog.js.
+  const placement = opts.placement ?? 'housekeep';
   const rng = makeRng(seed);
 
   const cells = new Uint8Array(W * H); // all WALL
@@ -165,37 +165,31 @@ export function generateHouse(seed, opts = {}) {
   const furnitureByName = new Map(furniture.map((f) => [f.name, f]));
 
   // ---- 6. Scatter the objects (the mess the robot has to deal with) ---------
-  const present = new Set(rooms.map((r) => r.type));
-  const usable = Object.keys(OBJECTS).filter((o) =>
-    OBJECTS[o].home.some((h) => furnitureByName.has(h)));
-  const chosen = rng.shuffle(usable).slice(0, rng.int(6, 8));
+  const present = new Set(furniture.map((f) => f.name));
+  const chosen = rng.shuffle(Object.keys(OBJECTS)).slice(0, rng.int(6, 8));
   const objects = [];
   const occupied = new Set();
+  const freeFloor = (room) => room.cells.filter(([x, y]) =>
+    walkable(x, y) && !occupied.has(idx(x, y)) && !(x === start.x && y === start.y));
+  const surfacesIn = (room) => furniture.filter((f) => f.room === room.id).map((f) => f.name);
   for (const name of chosen) {
-    const spec = OBJECTS[name];
-    const likelyHere = spec.likely.filter((t) => present.has(t));
-    const roomType = likelyHere.length && rng.chance(priorStrength)
-      ? rng.pick(likelyHere)
-      : rng.pick(rooms).type;
-    const room = rng.pick(rooms.filter((r) => r.type === roomType));
-    const surfaces = furniture.filter((f) =>
-      f.room === room.id && !spec.home.includes(f.name) && !occupied.has(idx(f.x, f.y)));
-    if (surfaces.length && rng.chance(0.45)) {
-      const f = rng.pick(surfaces);
-      occupied.add(idx(f.x, f.y));
-      objects.push({ name, x: f.x, y: f.y, on: f.name });
-    } else {
-      const floor = room.cells.filter(([x, y]) =>
-        walkable(x, y) && !occupied.has(idx(x, y)) && !(x === start.x && y === start.y));
-      const [x, y] = rng.pick(floor);
+    const ok = (room, spot) => (spot === 'floor' ? freeFloor(room).length > 0 : surfacesIn(room).includes(spot));
+    let pick = null;
+    for (let tries = 0; !pick && tries < 20; tries++) pick = placeMisplaced(rng, name, rooms, placement, ok, surfacesIn);
+    if (!pick) pick = { room: rooms.find((r) => freeFloor(r).length), spot: 'floor' };
+    if (pick.spot === 'floor') {
+      const [x, y] = rng.pick(freeFloor(pick.room));
       occupied.add(idx(x, y));
       objects.push({ name, x, y, on: null });
+    } else {
+      const f = furniture.find((q) => q.room === pick.room.id && q.name === pick.spot);
+      objects.push({ name, x: f.x, y: f.y, on: f.name });
     }
   }
 
   return {
     seed, W, H, cells, roomId, rooms, doors, start, frontDoor,
-    furniture, furnitureByName, furnAt, objects, priorStrength,
+    furniture, furnitureByName, furnAt, objects, placement,
     idx,
     walkable,
     // Things the household can change after generation (see household.js).

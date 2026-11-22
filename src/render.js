@@ -53,7 +53,15 @@ function symbol(g, name, x, y, cs, col) {
   switch (name) {
     case 'bed': rect(X, Y, w, w, 2); rect(X + w * 0.15, Y + w * 0.08, w * 0.7, w * 0.22, 2); line(X, Y + w * 0.42, X + w, Y + w * 0.42); break;
     case 'sofa': g.beginPath(); g.moveTo(X, Y + w * 0.2); g.lineTo(X, Y + w); g.lineTo(X + w, Y + w); g.lineTo(X + w, Y + w * 0.2); g.lineTo(X + w * 0.8, Y + w * 0.2); g.lineTo(X + w * 0.8, Y + w * 0.75); g.lineTo(X + w * 0.2, Y + w * 0.75); g.lineTo(X + w * 0.2, Y + w * 0.2); g.closePath(); g.fill(); g.stroke(); break;
-    case 'bookshelf': rect(X, Y + w * 0.2, w, w * 0.6); for (let i = 1; i < 4; i++) line(X + (w * i) / 4, Y + w * 0.2, X + (w * i) / 4, Y + w * 0.8); break;
+    case 'bookshelf': case 'bedroom shelf': case 'office shelf': case 'laundry shelf':
+      rect(X, Y + w * 0.2, w, w * 0.6); for (let i = 1; i < 4; i++) line(X + (w * i) / 4, Y + w * 0.2, X + (w * i) / 4, Y + w * 0.8); break;
+    case 'cupboard': case 'sideboard': case 'buffet': case 'bathroom cabinet':
+      rect(X, Y + w * 0.1, w, w * 0.8); line(cx, Y + w * 0.1, cx, Y + w * 0.9);
+      line(cx - w * 0.12, cy, cx - w * 0.04, cy); line(cx + w * 0.04, cy, cx + w * 0.12, cy); break;
+    case 'toilet': rect(X + w * 0.15, Y, w * 0.7, w * 0.28, 2); g.beginPath(); g.ellipse(cx, Y + w * 0.62, w * 0.3, w * 0.36, 0, 0, Math.PI * 2); g.fill(); g.stroke(); break;
+    case 'office chair': circ(cx, cy, w * 0.34); line(cx - w * 0.3, Y + w * 0.12, cx + w * 0.3, Y + w * 0.12); break;
+    case 'dining chair': rect(X + w * 0.15, Y + w * 0.25, w * 0.7, w * 0.6); line(X + w * 0.15, Y + w * 0.12, X + w * 0.85, Y + w * 0.12); break;
+    case 'utility sink': rect(X, Y, w, w, 2); rect(X + w * 0.18, Y + w * 0.18, w * 0.64, w * 0.64, 3); break;
     case 'coffee table': rect(X + w * 0.1, Y + w * 0.25, w * 0.8, w * 0.5, w * 0.2); break;
     case 'dining table': circ(cx, cy, w * 0.42); break;
     case 'desk': rect(X, Y, w, w * 0.55); circ(cx, Y + w * 0.82, w * 0.16); break;
@@ -235,7 +243,11 @@ export function draw(ctx, cs, house, robot, opts = {}) {
     if (cs >= 14) {
       ctx.lineWidth = 3; ctx.strokeStyle = col.paper; ctx.fillStyle = hollow ? col.err : col.ink;
       const label = hollow ? `${name}?` : name;
-      ctx.strokeText(label, px + cs * 0.3, py); ctx.fillText(label, px + cs * 0.3, py);
+      const flip = px + cs * 0.3 + ctx.measureText(label).width > W * cs - 2;
+      ctx.textAlign = flip ? 'right' : 'left';
+      const lx = flip ? px - cs * 0.3 : px + cs * 0.3;
+      ctx.strokeText(label, lx, py); ctx.fillText(label, lx, py);
+      ctx.textAlign = 'left';
     }
   };
   if (reveal) {
@@ -276,8 +288,12 @@ export function draw(ctx, cs, house, robot, opts = {}) {
   ctx.beginPath(); ctx.arc(rx, ry, cs * 0.12, 0, Math.PI * 2); ctx.fill();
   if (robot.carrying && cs >= 14) {
     ctx.fillStyle = col.ink; ctx.lineWidth = 3; ctx.strokeStyle = col.paper;
-    ctx.strokeText(robot.carrying, rx + cs * 0.55, ry - cs * 0.55);
-    ctx.fillText(robot.carrying, rx + cs * 0.55, ry - cs * 0.55);
+    const flip = rx + cs * 0.55 + ctx.measureText(robot.carrying).width > W * cs - 2;
+    ctx.textAlign = flip ? 'right' : 'left';
+    const lx = flip ? rx - cs * 0.55 : rx + cs * 0.55;
+    ctx.strokeText(robot.carrying, lx, ry - cs * 0.55);
+    ctx.fillText(robot.carrying, lx, ry - cs * 0.55);
+    ctx.textAlign = 'left';
   }
 
   // Hover

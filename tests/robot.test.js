@@ -4,7 +4,7 @@ import { generateHouse, N4 } from '../src/house.js';
 import { Robot, UNKNOWN } from '../src/robot.js';
 import { parse } from '../src/parser.js';
 import { oracleDeliver } from '../src/oracle.js';
-import { OBJECTS, ALL_OBJECTS } from '../src/catalog.js';
+import { ALL_OBJECTS, isTidy } from '../src/catalog.js';
 
 const run = (house, text, opts) => {
   const r = new Robot(house, opts);
@@ -68,9 +68,9 @@ test('tidy up puts every object where it belongs', () => {
     const h = generateHouse(s);
     const r = run(h, 'tidy up');
     assert.ok(r.history[0].ok, `seed ${s}`);
+    const present = new Set(h.furniture.map((f) => f.name));
     for (const o of h.objects) {
-      const home = OBJECTS[o.name].home.find((f) => h.furnitureByName.has(f));
-      assert.equal(o.on, home, `seed ${s}: ${o.name} left on ${o.on}`);
+      assert.ok(o.on && isTidy(o.name, o.on, present), `seed ${s}: ${o.name} left on ${o.on}`);
     }
   }
 });

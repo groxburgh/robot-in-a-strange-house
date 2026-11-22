@@ -17,13 +17,15 @@ test('put X in Y', () => {
 });
 
 test('synonyms map to canonical names', () => {
-  assert.equal(one('put the cup on the couch').obj, 'mug');
-  assert.deepEqual(one('put the cup on the couch').dest.names, ['sofa']);
-  assert.deepEqual(one('take the socks to the hamper').dest.names, ['laundry basket']);
+  assert.equal(one('put the glass on the couch').obj, 'cup');
+  assert.deepEqual(one('put the glass on the couch').dest.names, ['sofa']);
+  const t = one('take the trainers to the washer');
+  assert.equal(t.obj, 'shoes');
+  assert.deepEqual(t.dest.names, ['washing machine']);
 });
 
 test('ambiguous "table" keeps every candidate', () => {
-  assert.deepEqual(one('put the remote on the table').dest.names, ['dining table', 'coffee table', 'desk']);
+  assert.deepEqual(one('put the remote on the table').dest.names, ['dining table', 'coffee table', 'desk', 'nightstand']);
 });
 
 test('bring me / fetch / get go to the user', () => {
@@ -41,7 +43,8 @@ test('rooms as destinations', () => {
 
 test('extra location words are ignored', () => {
   assert.deepEqual(one('put the book on the shelf in the living room').dest.names, ['bookshelf']);
-  assert.equal(one('bring me the milk from the kitchen').obj, 'milk');
+  assert.deepEqual(one('put the book on the shelf in the bedroom').dest.names, ['bedroom shelf']);
+  assert.equal(one('bring me the apple from the kitchen').obj, 'apple');
 });
 
 test('chained commands', () => {
@@ -50,7 +53,7 @@ test('chained commands', () => {
 });
 
 test('"and" inside a clause does not split it', () => {
-  const r = parse('find the keys and come back');
+  const r = parse('find the remote and come back');
   assert.deepEqual(r.tasks.map((t) => t.type), ['find', 'goto']);
 });
 

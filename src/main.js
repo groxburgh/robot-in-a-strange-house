@@ -14,12 +14,12 @@ import { ALL_OBJECTS, onOrIn } from './catalog.js';
   const FONT = 'Archivo, system-ui, sans-serif';
 
   let house, robot, seed, household;
-  let strategy = 'semantic';
+  let strategy = 'procthor';
   let activity = 1;
   let memory = 'fresh';
   let eyesight = 'good';
   let worldCount = 0;
-  let reveal = false;
+  let reveal = true;
   let speed = 24; // ticks per second
   let acc = 0;
   let last = performance.now();
@@ -51,8 +51,8 @@ import { ALL_OBJECTS, onOrIn } from './catalog.js';
     const furn = rng.pick(house.furniture.filter((f) => !['bed', 'sofa'].includes(f.name)));
     const absent = rng.pick(ALL_OBJECTS.filter((o) => !objs.includes(o)));
     const chips = [
-      `Put the ${objs[0]} ${onOrIn(furn.name)} the ${furn.name}`,
-      `Bring me the ${objs[1]}`,
+      `Explore the house, then bring me the ${objs[0]}`,
+      `Put the ${objs[1]} ${onOrIn(furn.name)} the ${furn.name}`,
       `Find the ${objs[2]}, then come back`,
       'Tidy up',
       `Where's the ${absent}?`,
@@ -213,13 +213,13 @@ import { ALL_OBJECTS, onOrIn } from './catalog.js';
 
   // Benchmark table, from the committed results file.
   fetch('./bench/results.json').then((r) => r.json()).then((data) => {
-    const label = { 0: 'At random', 0.65: 'Usually somewhere typical', 0.9: 'Almost always typical' };
-    const best = {};
-    for (const r of data.results) if (!best[r.prior] || r.spl > best[r.prior].spl) best[r.prior] = r;
-    $('bench').innerHTML = data.results.map((r) => `<tr class="${best[r.prior] === r ? 'win' : ''}">
-      <td>${label[r.prior] ?? r.prior}</td><td>${r.strategy === 'semantic' ? 'Room hints' : 'Nearest gap'}</td>
-      <td>${(r.success * 100).toFixed(0)}%</td><td>${r.spl.toFixed(3)}</td><td>${r.meanSteps.toFixed(0)}</td></tr>`).join('');
-  }).catch(() => { $('bench').innerHTML = '<tr><td colspan="5">Results file not found.</td></tr>'; });
+    const where = { housekeep: 'Where people leave things', procthor: 'In the rooms they belong', random: 'Anywhere' };
+    const hint = { naive: 'None', procthor: 'Common sense', housekeep: 'Human data' };
+    const ci = (v) => (v ? `${v.diff > 0 ? '+' : ''}${v.diff.toFixed(1)} (${v.lo.toFixed(1)} to ${v.hi.toFixed(1)})` : '');
+    $('bench').innerHTML = data.results.map((r) => `<tr class="${r.vsNone && r.vsNone.hi < 0 ? 'win' : ''}">
+      <td>${where[r.placement]}</td><td>${hint[r.strategy]}</td>
+      <td>${r.meanSteps.toFixed(0)}</td><td>${ci(r.vsNone)}</td></tr>`).join('');
+  }).catch(() => { $('bench').innerHTML = '<tr><td colspan="4">Results file not found.</td></tr>'; });
   fetch('./bench/dynamic.json').then((r) => r.json()).then((data) => {
     $('bench2').innerHTML = data.results.map((r) => `<tr class="${r.memory === 'fresh' ? 'win' : ''}">
       <td>${r.label}</td><td>${r.memory === 'fresh' ? 'Re-checks' : 'Trusts memory'}</td>

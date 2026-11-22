@@ -2,76 +2,123 @@
   "seeds": 300,
   "results": [
     {
-      "prior": 0,
+      "vsNone": null,
+      "placement": "housekeep",
       "strategy": "naive",
       "success": 1,
-      "spl": 0.6185982765270021,
-      "meanSteps": 126.41666666666667,
-      "medianSteps": 116,
-      "oracleSteps": 63.03666666666667,
-      "tidySuccess": 1,
-      "tidySteps": 960.83,
+      "spl": 0.6053570660810125,
+      "meanSteps": 134.20333333333335,
+      "oracleSteps": 60.87,
       "episodes": 300
     },
     {
-      "prior": 0,
-      "strategy": "semantic",
+      "vsNone": {
+        "diff": -3.06,
+        "lo": -10.246666666666666,
+        "hi": 3.8533333333333335
+      },
+      "placement": "housekeep",
+      "strategy": "procthor",
       "success": 1,
-      "spl": 0.6082398998980032,
-      "meanSteps": 128.25,
-      "medianSteps": 110,
-      "oracleSteps": 63.03666666666667,
-      "tidySuccess": 1,
-      "tidySteps": 960.83,
+      "spl": 0.6209952605475751,
+      "meanSteps": 131.14333333333335,
+      "oracleSteps": 60.87,
       "episodes": 300
     },
     {
-      "prior": 0.65,
+      "vsNone": {
+        "diff": -3.9266666666666667,
+        "lo": -11.626666666666667,
+        "hi": 3.8066666666666666
+      },
+      "placement": "housekeep",
+      "strategy": "housekeep",
+      "success": 1,
+      "spl": 0.6135340709346141,
+      "meanSteps": 130.27666666666667,
+      "oracleSteps": 60.87,
+      "episodes": 300
+    },
+    {
+      "vsNone": null,
+      "placement": "procthor",
       "strategy": "naive",
       "success": 1,
-      "spl": 0.6440478917294223,
-      "meanSteps": 120.41333333333333,
-      "medianSteps": 111,
-      "oracleSteps": 61.46666666666667,
-      "tidySuccess": 1,
-      "tidySteps": 947.71,
+      "spl": 0.6471654268117603,
+      "meanSteps": 135.21,
+      "oracleSteps": 69.57,
       "episodes": 300
     },
     {
-      "prior": 0.65,
-      "strategy": "semantic",
+      "vsNone": {
+        "diff": -10.033333333333333,
+        "lo": -15.913333333333334,
+        "hi": -4.6
+      },
+      "placement": "procthor",
+      "strategy": "procthor",
       "success": 1,
-      "spl": 0.6749341366768645,
-      "meanSteps": 111.03333333333333,
-      "medianSteps": 98,
-      "oracleSteps": 61.46666666666667,
-      "tidySuccess": 1,
-      "tidySteps": 947.71,
+      "spl": 0.6794350600945204,
+      "meanSteps": 125.17666666666666,
+      "oracleSteps": 69.57,
       "episodes": 300
     },
     {
-      "prior": 0.9,
+      "vsNone": {
+        "diff": 3.98,
+        "lo": -2.3666666666666667,
+        "hi": 10.146666666666667
+      },
+      "placement": "procthor",
+      "strategy": "housekeep",
+      "success": 1,
+      "spl": 0.6094722921215147,
+      "meanSteps": 139.19,
+      "oracleSteps": 69.57,
+      "episodes": 300
+    },
+    {
+      "vsNone": null,
+      "placement": "random",
       "strategy": "naive",
       "success": 1,
-      "spl": 0.6514952780648734,
-      "meanSteps": 116.22666666666667,
-      "medianSteps": 108,
-      "oracleSteps": 58.906666666666666,
-      "tidySuccess": 1,
-      "tidySteps": 943.88,
+      "spl": 0.6413245588546375,
+      "meanSteps": 133.52666666666667,
+      "oracleSteps": 68.87333333333333,
       "episodes": 300
     },
     {
-      "prior": 0.9,
-      "strategy": "semantic",
+      "vsNone": {
+        "diff": 3.2266666666666666,
+        "lo": -2.7733333333333334,
+        "hi": 9.08
+      },
+      "placement": "random",
+      "strategy": "procthor",
       "success": 1,
-      "spl": 0.7031006361467086,
-      "meanSteps": 102.64,
-      "medianSteps": 87,
-      "oracleSteps": 58.906666666666666,
-      "tidySuccess": 1,
-      "tidySteps": 943.88,
+      "spl": 0.615067746511874,
+      "meanSteps": 136.75333333333333,
+      "oracleSteps": 68.87333333333333,
+      "episodes": 300
+    },
+    {
+      "vsNone": {
+        "diff": 4.433333333333334,
+        "lo": -2.4266666666666667,
+        "hi": 11.133333333333333
+      },
+      "placement": "random",
+      "strategy": "housekeep",
+      "success": 1,
+      "spl": 0.5806780533012963,
+      "meanSteps": 137.96,
+      "oracleSteps": 68.87333333333333,
       "episodes": 300
     }
-  ]
+  ],
+  "tidy": {
+    "success": 1,
+    "meanSteps": 904.51,
+    "episodes": 100
+  }
 }

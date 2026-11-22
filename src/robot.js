@@ -5,16 +5,17 @@
 //   memory      - occupancy grid + semantic map (room labels, furniture, objects)
 //   planning    - breadth-first search over cells it has actually seen
 //   exploration - frontier-based: walk to the edge of what it knows
-//   search      - "semantic" strategy biases exploration toward rooms where the
-//                 thing it wants usually is; "naive" strategy just takes the
-//                 nearest frontier
+//   search      - room hints bias exploration toward rooms where the thing it
+//                 wants is likely to be: "procthor" (common sense from the
+//                 ProcTHOR dataset), "housekeep" (where Housekeep's annotators
+//                 said misplaced things end up), or "naive" (nearest frontier)
 //   memory      - "fresh" (default) timestamps every sighting. If something
 //                 isn't where it remembers and there's nothing new to explore,
 //                 it re-checks every place it hasn't looked at since you asked.
 //                 "static" trusts its memory: once a room is seen, it's done.
 
 import { WALL, N4 } from './house.js';
-import { OBJECTS, FURNITURE_ROOM, onOrIn, SMALL, SIGHT } from './catalog.js';
+import { FURNITURE_ROOM, onOrIn, SMALL, SIGHT, roomHints, homesFor, isTidy } from './catalog.js';
 
 export const UNKNOWN = 0;
 export const K_FLOOR = 1;
@@ -29,7 +30,7 @@ const COMMAND_BUDGET = 4000; // ticks before the robot gives up on one command
 export class Robot {
   constructor(house, opts = {}) {
     this.h = house;
-    this.strategy = opts.strategy ?? 'semantic';
+    this.strategy = opts.strategy === 'semantic' ? 'procthor' : opts.strategy ?? 'procthor';
     this.radius = opts.radius ?? 6;
     this.memory = opts.memory ?? 'fresh';
     // How close it must be to notice an object (small things need a closer look).
@@ -233,12 +234,14 @@ export class Robot {
   // Choose somewhere to look next. Frontiers (the edge of the unknown) come
   // first. With `since` set (fresh memory), once there are no frontiers left it
   // falls back to any floor it hasn't looked at since tick `since`.
-  //   likely - ordered room types where the target usually is
+  //   hints  - {room type: weight}; missing = no opinion, 0 = unlikely
   //   toward - bias toward a known-but-unreachable point
-  chooseFrontier(likely = [], toward = null, since = null, target = null) {
+  chooseFrontier(hints = {}, toward = null, since = null, target = null) {
     const { W } = this.h;
     const dist = this.distanceField();
-    const semantic = this.strategy === 'semantic' && likely.length > 0;
+    const weights = Object.values(hints);
+    const maxW = Math.max(0, ...weights);
+    const semantic = this.strategy !== 'naive' && maxW > 0;
     const pick = (isTarget) => {
       let best = null, bestScore = Infinity;
       for (let i = 0; i < dist.length; i++) {
@@ -248,10 +251,8 @@ export class Robot {
         let score = dist[i];
         if (semantic) {
           const rid = this.knownRoom[i];
-          if (rid >= 0) {
-            const rank = likely.indexOf(this.seenRooms.get(rid));
-            score += rank >= 0 ? -24 * (likely.length - rank) / likely.length : 6;
-          }
+          const w = rid >= 0 ? hints[this.seenRooms.get(rid)] : undefined;
+          if (w !== undefined) score += w > 0 ? -24 * (w / maxW) : 6;
         }
         if (toward) score += 1.5 * Math.hypot(x - toward.x, y - toward.y);
         if (score < bestScore) { bestScore = score; best = { x, y }; }
@@ -276,15 +277,15 @@ export class Robot {
   }
 
   // One step of exploration. Returns a move action, or null if nothing is left.
-  explore(likely = [], toward = null, since = null, target = null) {
+  explore(hints = {}, toward = null, since = null, target = null) {
     const keep = !toward && this.#stillTarget(this.exploreTarget)
       && (since !== null || this.exploreTarget.kind === 'frontier');
-    if (!keep) this.exploreTarget = this.chooseFrontier(likely, toward, since, target);
+    if (!keep) this.exploreTarget = this.chooseFrontier(hints, toward, since, target);
     if (!this.exploreTarget) return null;
     let path = this.bfs((x, y) => x === this.exploreTarget.x && y === this.exploreTarget.y);
     if (path && path.length === 0) {
       // Standing on the target already: pick another.
-      this.exploreTarget = this.chooseFrontier(likely, toward, since, target);
+      this.exploreTarget = this.chooseFrontier(hints, toward, since, target);
       if (!this.exploreTarget) return null;
       path = this.bfs((x, y) => x === this.exploreTarget.x && y === this.exploreTarget.y);
     }
@@ -311,7 +312,7 @@ export class Robot {
   approach(tx, ty) {
     const path = this.bfs((x, y) => Math.abs(tx - x) + Math.abs(ty - y) <= 1);
     if (path && path.length) { this.plan = path; return { act: 'move', to: path[0] }; }
-    return this.explore([], { x: tx, y: ty });
+    return this.explore({}, { x: tx, y: ty });
   }
 
   // -------------------------------------------------------------- commands
@@ -445,7 +446,7 @@ export class Robot {
       case 'find': return this.#find(step.obj, step);
       case 'exploreAll': return this.explore() ?? 'done';
       // Walk close enough to every surface to spot even small things.
-      case 'sweep': return this.explore([], null, (step.since ??= this.ticks), 'sock') ?? 'done';
+      case 'sweep': return this.explore({}, null, (step.since ??= this.ticks), 'spoon') ?? 'done';
       case 'tidyPlan': return this.#tidyPlan(cmd);
       default: return { fail: `Unknown step ${step.op}` };
     }
@@ -455,7 +456,7 @@ export class Robot {
   // once there's nothing new left to explore; static memory gives up.
   #search(obj, step) {
     const since = this.memory === 'fresh' ? (step.since ??= this.ticks) : null;
-    return this.explore(OBJECTS[obj]?.likely ?? [], null, since, obj) ?? {
+    return this.explore(roomHints(obj, this.strategy), null, since, obj) ?? {
       fail: since !== null
         ? `I've re-checked every room since you asked. There's no ${obj} anywhere.`
         : `I've looked in every room. There's no ${obj} in this house.`,
@@ -508,7 +509,7 @@ export class Robot {
     if (dest.kind === 'furniture') {
       const name = dest.names.find((n) => this.furniture.has(n));
       if (!name) {
-        const rooms = [...new Set(dest.names.map((n) => FURNITURE_ROOM[n]))];
+        const rooms = Object.fromEntries(dest.names.map((n) => [FURNITURE_ROOM[n], 1]));
         return this.explore(rooms)
           ?? { fail: `I've looked everywhere. There's no ${dest.names[0]} in this house.` };
       }
@@ -532,7 +533,7 @@ export class Robot {
       }
       const path = this.bfs((x, y) => goodSpot(x, y) && this.#depthAt(x, y, type) >= (placing ? 1 : 0));
       if (path && path.length) { this.plan = path; return { act: 'move', to: path[0] }; }
-      return this.explore([type])
+      return this.explore({ [type]: 1 })
         ?? { fail: `I've looked everywhere. This house has no ${type}.` };
     }
     return { fail: 'I do not understand where that is.' };
@@ -550,17 +551,21 @@ export class Robot {
     return 1;
   }
 
+  // Put each known object somewhere a majority of Housekeep's annotators
+  // called "put away", choosing the nearest such surface the robot knows.
   #tidyPlan(cmd) {
     const extra = [];
-    const homeOf = (name) => (OBJECTS[name]?.home ?? []).find((f) => this.furniture.has(f));
+    const known = new Set(this.furniture.keys());
     const todo = [...this.objects.keys()];
     if (this.carrying) todo.unshift(this.carrying);
     for (const name of todo) {
-      const home = homeOf(name);
-      if (!home) continue;
-      const b = this.objects.get(name);
-      if (b && b.on === home) continue;
-      extra.push({ op: 'pick', obj: name }, { op: 'place', dest: { kind: 'furniture', names: [home] } });
+      const b = this.objects.get(name) ?? { x: this.x, y: this.y, on: null };
+      if (b.on && isTidy(name, b.on, known)) continue;
+      const homes = homesFor(name, known);
+      if (!homes.length) continue;
+      const near = homes.map((f) => [f, this.furniture.get(f)])
+        .sort((p, q) => (Math.abs(p[1].x - b.x) + Math.abs(p[1].y - b.y)) - (Math.abs(q[1].x - b.x) + Math.abs(q[1].y - b.y)))[0][0];
+      extra.push({ op: 'pick', obj: name }, { op: 'place', dest: { kind: 'furniture', names: [near] } });
     }
     this.say(extra.length
       ? `Found ${extra.length / 2} things out of place. Putting them away.`

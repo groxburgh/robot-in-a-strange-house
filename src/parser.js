@@ -6,7 +6,7 @@
 //   -> [{type:'deliver', obj:'mug', dest:{kind:'furniture', names:['sink']}},
 //       {type:'deliver', obj:'book', dest:{kind:'user'}}]
 
-import { OBJECTS, SYNONYMS, ALL_FURNITURE, ALL_ROOMS, ALL_OBJECTS, onOrIn } from './catalog.js';
+import { OBJECTS, SYNONYMS, ALL_FURNITURE, ALL_ROOMS, ALL_OBJECTS, FURNITURE_ROOM, onOrIn } from './catalog.js';
 
 const FILLER = /\b(please|could you|can you|would you|will you|kindly|now|for me|the|a|an|my|your|some|that|this|go and)\b/g;
 const VERB_START = /^(put|place|move|take|bring|carry|return|drop|leave|set|fetch|get|grab|give|go|walk|head|drive|run|find|locate|search|look|where|show|tidy|clean|explore|map|scan|come)\b/;
@@ -15,13 +15,27 @@ const USER_WORDS = new Set(['me', 'here', 'front door', 'door', 'you', 'entrance
 function canon(phrase) {
   let p = phrase.trim().replace(/\s+/g, ' ');
   if (!p) return null;
-  // "sink in kitchen" -> "sink"; keep "living room" etc. intact
+  // "shelf in living room" -> "shelf", remembering the room to narrow it down
+  const roomMatch = p.match(/ (?:in|from) ([a-z ]+)$/);
+  const roomWords = roomMatch ? canonExact(roomMatch[1]) : null;
+  const inRoom = roomWords && ALL_ROOMS.includes(roomWords[0]) ? roomWords[0] : null;
   const tries = [p, ...[' in ', ' on ', ' next to ', ' from ', ' that ', ' which '].map((w) => p.split(w)[0])];
   for (const t of tries) {
-    for (const cand of [t, t.replace(/es$/, ''), t.replace(/s$/, '')]) {
-      if (OBJECTS[cand] || ALL_FURNITURE.includes(cand) || ALL_ROOMS.includes(cand)) return [cand];
-      if (SYNONYMS[cand]) return SYNONYMS[cand];
+    const c = canonExact(t);
+    if (!c) continue;
+    if (inRoom && c.length > 1) {
+      const narrowed = c.filter((n) => FURNITURE_ROOM[n] === inRoom);
+      if (narrowed.length) return narrowed;
     }
+    return c;
+  }
+  return null;
+}
+
+function canonExact(t) {
+  for (const cand of [t, t.replace(/es$/, ''), t.replace(/s$/, '')]) {
+    if (OBJECTS[cand] || ALL_FURNITURE.includes(cand) || ALL_ROOMS.includes(cand)) return [cand];
+    if (SYNONYMS[cand]) return SYNONYMS[cand];
   }
   return null;
 }
