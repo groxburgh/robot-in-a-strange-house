@@ -1,0 +1,14 @@
+{
+  "name": "strange-house",
+  "version": "1.0.0",
+  "description": "A robot explores a house it has never seen and follows plain-English instructions. Runs in the browser, no dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "bench": "node bench/run.js",
+    "bench:json": "node bench/run.js --json > bench/results.json",
+    "serve": "python3 -m http.server 8000"
+  },
+  "license": "MIT"
+}

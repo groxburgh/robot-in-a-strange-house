@@ -1,0 +1,77 @@
+{
+  "seeds": 300,
+  "results": [
+    {
+      "prior": 0,
+      "strategy": "naive",
+      "success": 1,
+      "spl": 0.6674255904254189,
+      "meanSteps": 108.88333333333334,
+      "medianSteps": 108,
+      "oracleSteps": 63.03666666666667,
+      "tidySuccess": 1,
+      "tidySteps": 605.39,
+      "episodes": 300
+    },
+    {
+      "prior": 0,
+      "strategy": "semantic",
+      "success": 1,
+      "spl": 0.6575964990912506,
+      "meanSteps": 108.71666666666667,
+      "medianSteps": 106,
+      "oracleSteps": 63.03666666666667,
+      "tidySuccess": 1,
+      "tidySteps": 605.39,
+      "episodes": 300
+    },
+    {
+      "prior": 0.65,
+      "strategy": "naive",
+      "success": 1,
+      "spl": 0.6961214268777727,
+      "meanSteps": 103.89333333333333,
+      "medianSteps": 103,
+      "oracleSteps": 61.46666666666667,
+      "tidySuccess": 1,
+      "tidySteps": 590.05,
+      "episodes": 300
+    },
+    {
+      "prior": 0.65,
+      "strategy": "semantic",
+      "success": 1,
+      "spl": 0.7241847092229815,
+      "meanSteps": 95.76666666666667,
+      "medianSteps": 90,
+      "oracleSteps": 61.46666666666667,
+      "tidySuccess": 1,
+      "tidySteps": 590.05,
+      "episodes": 300
+    },
+    {
+      "prior": 0.9,
+      "strategy": "naive",
+      "success": 1,
+      "spl": 0.7110653331450967,
+      "meanSteps": 99.03333333333333,
+      "medianSteps": 93,
+      "oracleSteps": 58.906666666666666,
+      "tidySuccess": 1,
+      "tidySteps": 580.84,
+      "episodes": 300
+    },
+    {
+      "prior": 0.9,
+      "strategy": "semantic",
+      "success": 1,
+      "spl": 0.7540690955623855,
+      "meanSteps": 87.83333333333333,
+      "medianSteps": 82,
+      "oracleSteps": 58.906666666666666,
+      "tidySuccess": 1,
+      "tidySteps": 580.84,
+      "episodes": 300
+    }
+  ]
+}

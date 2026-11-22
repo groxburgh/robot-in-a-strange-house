@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First Day in a Strange House</title>
+<meta name="description" content="A browser robot simulator: a robot explores a house it has never seen and follows plain-English instructions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=Archivo+Narrow:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, exact, a little dry, like a surveyor's notes.
+   IDEA: an architect's drawing sheet that fills itself in as the robot looks around.
+   PICTURE: the live floor plan, walls in solid black, unseen space hatched.
+   COLOUR and TYPE: drafting white, black poché, pale room-zoning tints, one cobalt accent for the robot. Archivo + Archivo Narrow.
+   LAYOUT: modest title, then the sheet: plan left, title block and controls right; stacks on narrow screens. */
+:root{color-scheme:light dark;
+  --bg:light-dark(#f1f1ee,#0c0d0f);--paper:light-dark(#fbfbf9,#131417);--ink:light-dark(#16171a,#ecebe6);
+  --wall:light-dark(#16171a,#ecebe6);--soft:light-dark(#7b7e85,#8b8e96);--rule:light-dark(#16171a,#ecebe6);
+  --line:light-dark(rgba(0,0,0,.045),rgba(255,255,255,.04));--fog:light-dark(#e6e6e2,#1a1c20);--fog-line:light-dark(#d0d0cb,#262930);
+  --accent:light-dark(#2b4cff,#7088ff);--accent-ink:light-dark(#ffffff,#0c0d12);--err:light-dark(#b3261e,#ff8a80);
+  --r-living:light-dark(#fbe3d3,#3b2a21);--r-kitchen:light-dark(#fcefb4,#3a331a);--r-bedroom:light-dark(#e6dcfa,#2d2741);
+  --r-bath:light-dark(#cdeef6,#1c3239);--r-office:light-dark(#e0e6ee,#252c35);--r-dining:light-dark(#f9dbe3,#3a2329);--r-laundry:light-dark(#d5eee8,#1e3530)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Archivo,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3vw,40px) max(4vw,14px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font-weight:800;font-size:clamp(32px,4.4vw,48px);line-height:1.05;margin:0 0 10px;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:22px;line-height:1.2;margin:0 0 12px}
+.lede{max-width:66ch;margin:0;color:var(--soft);font-size:17px}
+.lede b{color:var(--ink);font-weight:600}
+.sheet{background:var(--paper);border:2px solid var(--rule);padding:10px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:10px}
+.fig{position:relative;aspect-ratio:3/2;border:1px solid var(--rule);background:var(--paper)}
+.fig canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+.side{position:relative;min-height:420px}
+.side-in{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px}
+.block{border:1px solid var(--rule)}
+.tb{display:grid;grid-template-columns:1fr 1fr;font-family:"Archivo Narrow",Archivo,sans-serif}
+.tb div{padding:6px 10px;border-top:1px solid var(--rule)}
+.tb div:nth-child(odd){border-right:1px solid var(--rule)}
+.tb div:nth-child(-n+2){border-top:0}
+.tb small{display:block;font-size:13px;color:var(--soft)}
+.tb b{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tb .wide{grid-column:1/-1;border-right:0!important}
+form{padding:10px}
+label.big{display:block;font-weight:600;margin-bottom:6px}
+.row{display:flex;gap:6px}
+input[type=text]{flex:1;font:16px Archivo,sans-serif;padding:10px 12px;border:1.5px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:0;min-height:44px}
+button,select{font:600 15px Archivo,sans-serif;min-height:44px;padding:0 14px;border:1.5px solid var(--rule);background:var(--paper);color:var(--ink);cursor:pointer;border-radius:0}
+button.go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:hover,select:hover{background:var(--fog)}button.go:hover{filter:brightness(1.1);background:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chips button{min-height:36px;font-weight:500;font-size:14px;padding:4px 10px;border-width:1px;border-style:dashed}
+.log{list-style:none;margin:0;padding:8px 10px;overflow-y:auto;flex:1;min-height:0;font-size:14px;line-height:1.45;border-top:1px solid var(--rule)}
+.log li{padding:2px 0}
+.log .command{font-weight:600;margin-top:8px}
+.log .done{color:var(--accent);font-weight:600}
+.log .error{color:var(--err);font-weight:600}
+.log .room,.log .object{color:var(--soft)}
+.log .t{display:inline-block;width:3.2em;color:var(--soft);font-variant-numeric:tabular-nums;font-family:"Archivo Narrow",sans-serif}
+.controls{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:8px 0 0}
+.tb .house{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-right:6px}
+.tb .house button{min-height:40px;padding:0 10px;font-size:14px}
+.seg{display:flex}.seg button{border-right-width:0;padding:0 10px}.seg button:last-child{border-right-width:1.5px}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.check{display:flex;align-items:center;gap:8px;min-height:44px;font-size:15px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+.hint{margin:6px 2px 0;font-size:14px;color:var(--soft);min-height:1.5em}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:clamp(20px,4vw,56px)}
+.how{margin:0;padding:0;list-style:none;counter-reset:n}
+.how li{padding:10px 0;border-top:1px solid var(--rule)}
+.how b{display:block}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 8px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+thead th{font-weight:600;border-bottom:2px solid var(--rule);font-family:"Archivo Narrow",sans-serif;white-space:normal;vertical-align:bottom}
+td{font-variant-numeric:tabular-nums}
+tr.win td{font-weight:600}
+.scroll{overflow-x:auto}
+.note{font-size:14px;color:var(--soft);margin-top:10px;max-width:70ch}
+footer{font-size:14px;color:var(--soft)}
+footer a,.note a{color:var(--ink)}
+@media(max-width:980px){.sheet{grid-template-columns:1fr}.left{display:contents}.fig{order:1}.hint{order:2;margin-top:-4px}.side{order:3;min-height:0}.controls{order:4;padding-top:0}.side-in{position:static}.log{height:220px;flex:none}}
+@media(max-width:760px){.cols{grid-template-columns:1fr}}
+@media(max-width:600px){.sheet{padding:6px}.controls .seg button{padding:0 8px}table{font-size:13px}}
+</style>
+</head>
+<body>
+<header class="band" style="padding-bottom:16px">
+  <div class="wrap">
+    <h1>First day in a strange house</h1>
+    <p class="lede">A robot is dropped at the front door of a house it has never seen. <b>Tell it what to do in plain English.</b> It has to work out the layout, find things and put them where you asked, using only what it has seen so far. Every house is new.</p>
+  </div>
+</header>
+
+<main class="band" style="padding-top:0">
+  <div class="wrap sheet">
+    <div class="left">
+      <div class="fig"><canvas id="plan" aria-label="Floor plan of the house as the robot currently knows it"></canvas></div>
+      <p class="hint" id="hover-info">Hatched areas are parts of the house the robot hasn't seen yet. Hover or tap the plan to inspect a spot.</p>
+      <div class="controls">
+          <div class="seg" role="group" aria-label="Speed" id="speed">
+            <button type="button" data-speed="6">Slow</button>
+            <button type="button" data-speed="24" aria-pressed="true">Normal</button>
+            <button type="button" data-speed="90">Fast</button>
+            <button type="button" data-speed="600">Max</button>
+          </div>
+          <button type="button" id="stop">Stop</button>
+          <label class="check"><input type="checkbox" id="reveal"> Show the real house</label>
+          <select id="strategy" aria-label="Search strategy">
+            <option value="semantic">Use room hints</option>
+            <option value="naive">Nearest gap first</option>
+          </select>
+          <button type="button" id="reset">Restart</button>
+      </div>
+    </div>
+
+    <div class="side"><div class="side-in">
+      <div class="block">
+        <div class="tb">
+          <div class="house"><span><small>House</small><b id="s-seed">#1</b></span><button type="button" id="new">New house</button></div>
+          <div><small>Steps taken</small><b id="s-steps">0</b></div>
+          <div><small>Floor seen</small><b id="s-seen">0%</b></div>
+          <div><small>Rooms found</small><b id="s-rooms">0 of 0</b></div>
+          <div class="wide"><small>Holding</small><b id="s-hold">nothing</b></div>
+        </div>
+      </div>
+
+      <div class="block" style="display:flex;flex-direction:column;min-height:0;flex:1">
+        <form id="cmd" autocomplete="off">
+          <label class="big" for="cmd-input">Tell the robot</label>
+          <div class="row">
+            <input type="text" id="cmd-input" placeholder="put the mug in the sink" spellcheck="false">
+            <button class="go" type="submit">Go</button>
+          </div>
+          <div class="chips" id="chips"></div>
+        </form>
+        <ol class="log" id="log" aria-live="polite"></ol>
+</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<section class="band">
+  <div class="wrap cols">
+    <div>
+      <h2>How it works</h2>
+      <ol class="how">
+        <li><b>It only knows what it has seen.</b>It sees six cells in every direction, and walls block its view. Everything else stays hatched until it looks.</li>
+        <li><b>It plans on its own map.</b>Routes are worked out only over floor it has actually seen, then re-planned every step as the map grows.</li>
+        <li><b>It explores the edges.</b>When it needs something it hasn't found, it walks to the boundary between known and unknown space.</li>
+        <li><b>It can use hints.</b>With room hints on, it checks bathrooms first for a towel and kitchens first for milk. Switch it off to compare.</li>
+        <li><b>It reads plain English.</b>Commands can be chained with "then". It tells you when it doesn't understand a word, or when something isn't in the house.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>Room hints help when the house is predictable</h2>
+      <p style="margin:0 0 12px">300 new houses per row, one errand each. SPL compares the robot's route with the shortest route from someone who already had the floor plan: 1.0 would be a perfect score.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Where things were left</th><th>Search</th><th>Success</th><th>SPL</th><th>Mean steps</th></tr></thead>
+          <tbody id="bench"></tbody>
+        </table>
+      </div>
+      <p class="note">When objects are scattered at random, the hints are slightly worse than useless. When the house is tidy-ish, they cut steps by about a tenth. Run <code>node bench/run.js</code> to reproduce.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="band" style="padding-top:0">
+  <div class="wrap">A small robotics side project by Greg Roxburgh. The premise comes from Figure AI's Brett Adcock on <i>Moonshots with Peter Diamandis</i> (November 2026): a home robot isn't ready until it can walk into an unfamiliar house and follow spoken instructions without help. Source on <a href="https://github.com/groxburgh/strange-house">GitHub</a>.</div>
+</footer>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
